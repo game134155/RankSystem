@@ -13,9 +13,9 @@ INSERT INTO player (username, password_hash, is_admin) VALUES
 ('iris', SHA2('iris123', 256), 0),
 ('jack', SHA2('jack123', 256), 0);
 
-INSERT INTO game (name) VALUES
-('League of Legends'),
-('csgo');
+INSERT INTO game (name, default_mmr) VALUES
+('League of Legends', 1000),
+('csgo', 500);
 
 INSERT INTO rank_tier (game_id, tier_name, min_mmr) VALUES
 (1, 'Bronze', 0),
@@ -30,13 +30,14 @@ INSERT INTO rank_tier (game_id, tier_name, min_mmr) VALUES
 (2, 'Diamond', 1500);
 
 INSERT INTO player_stats (player_id, game_id, tier_id, mmr, wins, losses)
-SELECT p.player_id, 1, rt.tier_id, 1000, 0, 0
+SELECT p.player_id, g.game_id, rt.tier_id, g.default_mmr, 0, 0
 FROM player p
-JOIN rank_tier rt ON rt.game_id = 1 AND rt.tier_name = 'Silver'
-WHERE p.username <> 'admin';
-
-INSERT INTO player_stats (player_id, game_id, tier_id, mmr, wins, losses)
-SELECT p.player_id, 2, rt.tier_id, 1000, 0, 0
-FROM player p
-JOIN rank_tier rt ON rt.game_id = 2 AND rt.tier_name = 'Silver'
+CROSS JOIN game g
+JOIN rank_tier rt ON rt.game_id = g.game_id
+    AND rt.min_mmr = (
+        SELECT MAX(rt2.min_mmr)
+        FROM rank_tier rt2
+        WHERE rt2.game_id = g.game_id
+          AND rt2.min_mmr <= g.default_mmr
+    )
 WHERE p.username <> 'admin';

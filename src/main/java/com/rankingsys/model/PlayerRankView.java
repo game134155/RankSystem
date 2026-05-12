@@ -1,11 +1,20 @@
 package com.rankingsys.model;
 
 public class PlayerRankView {
+    private int gameId;
     private String gameName;
     private int mmr;
     private int wins;
     private int losses;
     private String tierName;
+
+    public int getGameId() {
+        return gameId;
+    }
+
+    public void setGameId(int gameId) {
+        this.gameId = gameId;
+    }
 
     public String getGameName() {
         return gameName;

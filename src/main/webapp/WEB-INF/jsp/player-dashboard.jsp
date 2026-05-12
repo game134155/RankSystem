@@ -18,12 +18,22 @@
     List<MatchRecordView> matchRecords = (List<MatchRecordView>) request.getAttribute("matchRecords");
     List<String> games = (List<String>) request.getAttribute("games");
     String gameFilter = (String) request.getAttribute("gameFilter");
+    String flashPlayerError = (String) session.getAttribute("flashPlayerError");
+    String flashPlayerOk = (String) session.getAttribute("flashPlayerOk");
+    session.removeAttribute("flashPlayerError");
+    session.removeAttribute("flashPlayerOk");
 %>
 <div class="container">
     <div class="topbar">
         <h2>Welcome, <%=user.getUsername()%> (<%=user.isAdmin() ? "Admin" : "Player"%>)</h2>
         <a href="<%=request.getContextPath()%>/logout">Logout</a>
     </div>
+    <% if (flashPlayerOk != null) { %>
+    <p class="ok"><%=flashPlayerOk%></p>
+    <% } %>
+    <% if (flashPlayerError != null) { %>
+    <p class="error"><%=flashPlayerError%></p>
+    <% } %>
 
     <div class="card">
         <h3>Player Info</h3>
@@ -33,7 +43,10 @@
     <div class="card">
         <h3>Current Ranking</h3>
         <table>
-            <tr><th>Game</th><th>Tier</th><th>MMR</th><th>Wins</th><th>Losses</th></tr>
+            <tr>
+                <th>Game</th><th>Tier</th><th>MMR</th><th>Wins</th><th>Losses</th>
+                <% if (user.isAdmin()) { %><th>Admin Action</th><% } %>
+            </tr>
             <% for (PlayerRankView item : rankViews) { %>
             <tr>
                 <td><%=item.getGameName()%></td>
@@ -41,6 +54,16 @@
                 <td><%=item.getMmr()%></td>
                 <td><%=item.getWins()%></td>
                 <td><%=item.getLosses()%></td>
+                <% if (user.isAdmin()) { %>
+                <td>
+                    <form method="post" action="<%=request.getContextPath()%>/admin/update-player-mmr" class="inline-form">
+                        <input type="hidden" name="playerId" value="<%=viewPlayerId%>">
+                        <input type="hidden" name="gameId" value="<%=item.getGameId()%>">
+                        <input type="number" name="mmr" min="0" value="<%=item.getMmr()%>" required>
+                        <button type="submit">Save MMR</button>
+                    </form>
+                </td>
+                <% } %>
             </tr>
             <% } %>
         </table>
@@ -77,10 +100,10 @@
         </table>
     </div>
 
-    <% if (!user.isAdmin()) { %>
+    <% if (user.isAdmin()) { %>
     <div class="card">
         <h3>Add Match</h3>
-        <button onclick="alert('No permission: only admin can add matches.')">Add 5v5 Match</button>
+        <a href="<%=request.getContextPath()%>/admin/dashboard">Go to Admin Dashboard to add 5v5 match</a>
     </div>
     <% } %>
 

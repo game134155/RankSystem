@@ -12,7 +12,7 @@ import java.util.List;
 
 public class PlayerDao {
     public List<PlayerRankView> getRankViewsByPlayerId(int playerId) {
-        String sql = "SELECT g.name AS game_name, ps.mmr, ps.wins, ps.losses, rt.tier_name " +
+        String sql = "SELECT g.game_id, g.name AS game_name, ps.mmr, ps.wins, ps.losses, rt.tier_name " +
                 "FROM player_stats ps " +
                 "JOIN game g ON g.game_id = ps.game_id " +
                 "JOIN rank_tier rt ON rt.tier_id = ps.tier_id " +
@@ -26,6 +26,7 @@ public class PlayerDao {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     PlayerRankView view = new PlayerRankView();
+                    view.setGameId(rs.getInt("game_id"));
                     view.setGameName(rs.getString("game_name"));
                     view.setMmr(rs.getInt("mmr"));
                     view.setWins(rs.getInt("wins"));

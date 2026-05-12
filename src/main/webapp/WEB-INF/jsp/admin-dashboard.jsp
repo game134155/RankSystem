@@ -13,8 +13,10 @@
     List<Map<String, Object>> players = (List<Map<String, Object>>) request.getAttribute("players");
     List<String> games = (List<String>) request.getAttribute("games");
     String flashError = (String) session.getAttribute("flashError");
+    String flashOk = (String) session.getAttribute("flashOk");
     Map<String, String> flashForm = (Map<String, String>) session.getAttribute("flashForm");
     session.removeAttribute("flashError");
+    session.removeAttribute("flashOk");
     session.removeAttribute("flashForm");
 %>
 <div class="container">
@@ -26,9 +28,31 @@
     <% if ("1".equals(request.getParameter("ok"))) { %>
     <p class="ok">Match added successfully.</p>
     <% } %>
+    <% if (flashOk != null) { %>
+    <p class="ok"><%=flashOk%></p>
+    <% } %>
     <% if (flashError != null) { %>
     <p class="error"><%=flashError%></p>
     <% } %>
+
+    <div class="card">
+        <h3>Add Player</h3>
+        <form method="post" action="<%=request.getContextPath()%>/admin/manage-player">
+            <input type="hidden" name="action" value="create">
+            <label>Username</label>
+            <input type="text" name="username" placeholder="new username" required>
+
+            <label>Password</label>
+            <input type="password" name="password" placeholder="new password" required>
+
+            <label>Role</label>
+            <select name="isAdmin">
+                <option value="0">Player</option>
+                <option value="1">Admin</option>
+            </select>
+            <button type="submit">Add Player</button>
+        </form>
+    </div>
 
     <div class="card">
         <h3>All Players</h3>
@@ -42,6 +66,22 @@
                 <td><%=row.get("regDate")%></td>
                 <td>
                     <a href="<%=request.getContextPath()%>/player/dashboard?playerId=<%=row.get("playerId")%>">View</a>
+                    <form method="post" action="<%=request.getContextPath()%>/admin/manage-player">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="playerId" value="<%=row.get("playerId")%>">
+                        <input type="text" name="username" value="<%=row.get("username")%>" required>
+                        <select name="isAdmin">
+                            <option value="0" <%=((Boolean) row.get("isAdmin")) ? "" : "selected"%>>Player</option>
+                            <option value="1" <%=((Boolean) row.get("isAdmin")) ? "selected" : ""%>>Admin</option>
+                        </select>
+                        <input type="password" name="password" placeholder="new password (optional)">
+                        <button type="submit">Update</button>
+                    </form>
+                    <form method="post" action="<%=request.getContextPath()%>/admin/manage-player" onsubmit="return confirm('Delete this player?');">
+                        <input type="hidden" name="action" value="delete">
+                        <input type="hidden" name="playerId" value="<%=row.get("playerId")%>">
+                        <button type="submit">Delete</button>
+                    </form>
                 </td>
             </tr>
             <% } %>

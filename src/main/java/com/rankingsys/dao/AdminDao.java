@@ -34,6 +34,151 @@ public class AdminDao {
         return rows;
     }
 
+    public void createPlayer(String username, String passwordHash, boolean isAdmin) {
+        String sql = "INSERT INTO player(username, password_hash, is_admin) VALUES(?, ?, ?)";
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                ps.setString(1, username);
+                ps.setString(2, passwordHash);
+                ps.setBoolean(3, isAdmin);
+                ps.executeUpdate();
+
+                int playerId;
+                try (ResultSet rs = ps.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("Cannot get generated player_id.");
+                    }
+                    playerId = rs.getInt(1);
+                }
+
+                initializePlayerStatsForAllGames(conn, playerId);
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw buildPlayerManageException("Create player failed.", e);
+        }
+    }
+
+    public void updatePlayer(int playerId, String username, String passwordHash, boolean isAdmin) {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                if (!playerExists(conn, playerId)) {
+                    throw new IllegalArgumentException("Player not found.");
+                }
+                if (!isAdmin && queryIsAdmin(conn, playerId) && countAdmins(conn) <= 1) {
+                    throw new IllegalArgumentException("At least one admin must remain.");
+                }
+                if (passwordHash == null) {
+                    updatePlayerBasic(conn, playerId, username, isAdmin);
+                } else {
+                    updatePlayerWithPassword(conn, playerId, username, passwordHash, isAdmin);
+                }
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw buildPlayerManageException("Update player failed.", e);
+        }
+    }
+
+    public void deletePlayer(int playerId, int actingAdminId) {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                if (!playerExists(conn, playerId)) {
+                    throw new IllegalArgumentException("Player not found.");
+                }
+                if (queryIsAdmin(conn, playerId) && countAdmins(conn) <= 1) {
+                    throw new IllegalArgumentException("At least one admin must remain.");
+                }
+
+                String reassignMatchCreatorSql = "UPDATE match_history SET created_by = ? WHERE created_by = ?";
+                try (PreparedStatement ps = conn.prepareStatement(reassignMatchCreatorSql)) {
+                    ps.setInt(1, actingAdminId);
+                    ps.setInt(2, playerId);
+                    ps.executeUpdate();
+                }
+
+                String deleteMatchResultSql = "DELETE FROM match_player_result WHERE player_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(deleteMatchResultSql)) {
+                    ps.setInt(1, playerId);
+                    ps.executeUpdate();
+                }
+
+                String deleteStatsSql = "DELETE FROM player_stats WHERE player_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(deleteStatsSql)) {
+                    ps.setInt(1, playerId);
+                    ps.executeUpdate();
+                }
+
+                String deletePlayerSql = "DELETE FROM player WHERE player_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(deletePlayerSql)) {
+                    ps.setInt(1, playerId);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw buildPlayerManageException("Delete player failed.", e);
+        }
+    }
+
+    public void updatePlayerMmr(int playerId, int gameId, int mmr) {
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String lockStatsSql = "SELECT player_id FROM player_stats WHERE player_id = ? AND game_id = ? FOR UPDATE";
+                try (PreparedStatement ps = conn.prepareStatement(lockStatsSql)) {
+                    ps.setInt(1, playerId);
+                    ps.setInt(2, gameId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            throw new IllegalArgumentException("Player has no stats for this game.");
+                        }
+                    }
+                }
+
+                int tierId = queryTierIdByMmr(conn, gameId, mmr);
+                String updateSql = "UPDATE player_stats SET mmr = ?, tier_id = ? WHERE player_id = ? AND game_id = ?";
+                try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+                    ps.setInt(1, mmr);
+                    ps.setInt(2, tierId);
+                    ps.setInt(3, playerId);
+                    ps.setInt(4, gameId);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            String message = e.getMessage();
+            if (message == null || message.trim().length() == 0) {
+                message = "Update player MMR failed.";
+            }
+            throw new RuntimeException(message, e);
+        }
+    }
+
     public void addFiveVsFiveMatch(String gameName, List<String> winners, List<String> losers, int adminId) {
         if (winners.size() != 5 || losers.size() != 5) {
             throw new IllegalArgumentException("Winners and losers must each have 5 players.");
@@ -221,5 +366,107 @@ public class AdminDao {
                 return rs.getInt("tier_id");
             }
         }
+    }
+
+    private void initializePlayerStatsForAllGames(Connection conn, int playerId) throws Exception {
+        String sql = "SELECT game_id, default_mmr FROM game";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                int gameId = rs.getInt("game_id");
+                int defaultMmr = rs.getInt("default_mmr");
+                int tierId = queryTierIdByMmr(conn, gameId, defaultMmr);
+
+                String insertStatsSql = "INSERT INTO player_stats(player_id, game_id, tier_id, mmr, wins, losses) " +
+                        "VALUES(?, ?, ?, ?, 0, 0)";
+                try (PreparedStatement insertPs = conn.prepareStatement(insertStatsSql)) {
+                    insertPs.setInt(1, playerId);
+                    insertPs.setInt(2, gameId);
+                    insertPs.setInt(3, tierId);
+                    insertPs.setInt(4, defaultMmr);
+                    insertPs.executeUpdate();
+                }
+            }
+        }
+    }
+
+    private void updatePlayerBasic(Connection conn, int playerId, String username, boolean isAdmin) throws Exception {
+        String sql = "UPDATE player SET username = ?, is_admin = ? WHERE player_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setBoolean(2, isAdmin);
+            ps.setInt(3, playerId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void updatePlayerWithPassword(Connection conn, int playerId, String username,
+                                          String passwordHash, boolean isAdmin) throws Exception {
+        String sql = "UPDATE player SET username = ?, password_hash = ?, is_admin = ? WHERE player_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, passwordHash);
+            ps.setBoolean(3, isAdmin);
+            ps.setInt(4, playerId);
+            ps.executeUpdate();
+        }
+    }
+
+    private boolean playerExists(Connection conn, int playerId) throws Exception {
+        String sql = "SELECT player_id FROM player WHERE player_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    private boolean queryIsAdmin(Connection conn, int playerId) throws Exception {
+        String sql = "SELECT is_admin FROM player WHERE player_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, playerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return false;
+                }
+                return rs.getBoolean("is_admin");
+            }
+        }
+    }
+
+    private int countAdmins(Connection conn) throws Exception {
+        String sql = "SELECT COUNT(*) AS total FROM player WHERE is_admin = 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (!rs.next()) {
+                return 0;
+            }
+            return rs.getInt("total");
+        }
+    }
+
+    private RuntimeException buildPlayerManageException(String fallbackMessage, Exception e) {
+        String rootMessage = extractRootMessage(e);
+        String lowerMessage = rootMessage == null ? "" : rootMessage.toLowerCase();
+        if (lowerMessage.contains("duplicate") && lowerMessage.contains("username")) {
+            return new RuntimeException("Username already exists.", e);
+        }
+        if (rootMessage == null || rootMessage.trim().length() == 0) {
+            return new RuntimeException(fallbackMessage, e);
+        }
+        return new RuntimeException(rootMessage, e);
+    }
+
+    private String extractRootMessage(Throwable e) {
+        Throwable cursor = e;
+        String message = null;
+        while (cursor != null) {
+            if (cursor.getMessage() != null && cursor.getMessage().trim().length() > 0) {
+                message = cursor.getMessage();
+            }
+            cursor = cursor.getCause();
+        }
+        return message;
     }
 }
