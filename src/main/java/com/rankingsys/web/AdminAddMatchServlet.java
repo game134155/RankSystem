@@ -11,7 +11,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @WebServlet("/admin/add-match")
 public class AdminAddMatchServlet extends HttpServlet {
@@ -35,11 +37,40 @@ public class AdminAddMatchServlet extends HttpServlet {
 
         try {
             adminDao.addFiveVsFiveMatch(gameName, winners, losers, user.getPlayerId());
+            req.getSession().removeAttribute("flashForm");
             resp.sendRedirect(req.getContextPath() + "/admin/dashboard?ok=1");
         } catch (Exception e) {
-            req.getSession().setAttribute("flashError", e.getMessage());
+            HttpSession session = req.getSession();
+            session.setAttribute("flashError", extractRootMessage(e));
+            session.setAttribute("flashForm", buildFlashForm(gameName, winners, losers));
             resp.sendRedirect(req.getContextPath() + "/admin/dashboard");
         }
+    }
+
+    private Map<String, String> buildFlashForm(String gameName, List<String> winners, List<String> losers) {
+        Map<String, String> form = new HashMap<String, String>();
+        form.put("gameName", gameName == null ? "" : gameName);
+        for (int i = 1; i <= 5; i++) {
+            form.put("winner" + i, safeValue(winners.get(i - 1)));
+            form.put("loser" + i, safeValue(losers.get(i - 1)));
+        }
+        return form;
+    }
+
+    private String safeValue(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private String extractRootMessage(Exception e) {
+        Throwable cursor = e;
+        String message = null;
+        while (cursor != null) {
+            if (cursor.getMessage() != null && cursor.getMessage().trim().length() > 0) {
+                message = cursor.getMessage();
+            }
+            cursor = cursor.getCause();
+        }
+        return message == null ? "Add 5v5 match failed." : message;
     }
 
     private User getSessionUser(HttpServletRequest req) {

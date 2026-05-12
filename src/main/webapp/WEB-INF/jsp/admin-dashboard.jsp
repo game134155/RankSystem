@@ -13,7 +13,9 @@
     List<Map<String, Object>> players = (List<Map<String, Object>>) request.getAttribute("players");
     List<String> games = (List<String>) request.getAttribute("games");
     String flashError = (String) session.getAttribute("flashError");
+    Map<String, String> flashForm = (Map<String, String>) session.getAttribute("flashForm");
     session.removeAttribute("flashError");
+    session.removeAttribute("flashForm");
 %>
 <div class="container">
     <div class="topbar">
@@ -52,7 +54,7 @@
             <label>Game</label>
             <select name="gameName" required>
                 <% for (String game : games) { %>
-                <option value="<%=game%>"><%=game%></option>
+                <option value="<%=game%>" <%= (flashForm != null && game.equals(flashForm.get("gameName"))) ? "selected" : "" %>><%=game%></option>
                 <% } %>
             </select>
 
@@ -60,13 +62,13 @@
                 <div>
                     <h4>Winner Team (5 usernames)</h4>
                     <% for (int i = 1; i <= 5; i++) { %>
-                    <input type="text" name="winner<%=i%>" placeholder="winner username <%=i%>" required>
+                    <input type="text" name="winner<%=i%>" placeholder="winner username <%=i%>" value="<%=flashForm == null ? "" : flashForm.get("winner" + i)%>" required>
                     <% } %>
                 </div>
                 <div>
                     <h4>Loser Team (5 usernames)</h4>
                     <% for (int i = 1; i <= 5; i++) { %>
-                    <input type="text" name="loser<%=i%>" placeholder="loser username <%=i%>" required>
+                    <input type="text" name="loser<%=i%>" placeholder="loser username <%=i%>" value="<%=flashForm == null ? "" : flashForm.get("loser" + i)%>" required>
                     <% } %>
                 </div>
             </div>

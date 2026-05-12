@@ -5,9 +5,14 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 
 public final class DBUtil {
-    private static final String JDBC_URL = "jdbc:mysql://localhost:3306/ranking_system?useSSL=false&serverTimezone=UTC";
+    private static final String JDBC_URL =
+            "jdbc:mysql://localhost:3306/ranking_system?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true";
+            //here is the private key for you to connect the database
     private static final String JDBC_USER = "root";
-    private static final String JDBC_PASSWORD = "114514";
+
+    private static final String JDBC_PASSWORD = "12345678";
+
+
 
     private DBUtil() {
     }

@@ -23,12 +23,14 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         String playerIdRaw = req.getParameter("playerId");
+        String playerIdInput = playerIdRaw == null ? "" : playerIdRaw.trim();
         String password = req.getParameter("password");
         try {
             int playerId = Integer.parseInt(playerIdRaw);
             User user = authDao.login(playerId, password);
             if (user == null) {
                 req.setAttribute("error", "Invalid player_id or password.");
+                req.setAttribute("playerId", playerIdInput);
                 req.getRequestDispatcher("/WEB-INF/jsp/login.jsp").forward(req, resp);
                 return;
             }
@@ -41,6 +43,7 @@ public class LoginServlet extends HttpServlet {
             }
         } catch (NumberFormatException e) {
             req.setAttribute("error", "Player ID must be a number.");
+            req.setAttribute("playerId", playerIdInput);
             req.getRequestDispatcher("/WEB-INF/jsp/login.jsp").forward(req, resp);
         }
     }

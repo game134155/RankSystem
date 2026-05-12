@@ -28,10 +28,17 @@ Course project implementation for a game ranking information system.
 - `sql/seed.sql`: test data
 
 ## Database Setup
-1. Run `sql/schema.sql`
-2. Run `sql/seed.sql`
+1. One-command reset (drop db + run `schema.sql` + run `seed.sql`):
+   ```bash
+   chmod +x scripts/reset-db.sh
+   ./scripts/reset-db.sh
+   ```
+2. Optional: override connection by env vars:
+   ```bash
+   DB_HOST=localhost DB_PORT=3306 DB_USER=root DB_PASS=12345678 DB_NAME=ranking_system ./scripts/reset-db.sh
+   ```
 
-Default admin account:
+Default admin account (after seed):
 - `player_id = 1`
 - password: `admin123`
 
@@ -42,7 +49,7 @@ Edit DB credentials in:
 Default now:
 - URL: `jdbc:mysql://localhost:3306/ranking_system?useSSL=false&serverTimezone=UTC`
 - user: `root`
-- password: `123456`
+- password: `12345678`
 
 ## Tomcat Deployment
 1. Create a Dynamic Web Project in Eclipse/IDEA and import this folder.
@@ -54,3 +61,8 @@ Default now:
 ## Notes
 - Password is stored as SHA-256 hash.
 - The project avoids ORM and heavy MVC frameworks as required.
+根据 player_id 精确查一行用户（如果有）。
+取出库里的 password_hash。
+对输入密码做 SHA-256，再和库中哈希做字符串比较。
+不相等就返回 null（登录失败）。
+通过哈希对比的办法，我们更有效的绕过了sql注入攻击

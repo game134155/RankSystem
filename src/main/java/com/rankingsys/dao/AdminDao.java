@@ -72,7 +72,11 @@ public class AdminDao {
                 conn.setAutoCommit(true);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Add 5v5 match failed.", e);
+            String message = e.getMessage();
+            if (message == null || message.trim().length() == 0) {
+                message = "Add 5v5 match failed.";
+            }
+            throw new RuntimeException(message, e);
         }
     }
 
