@@ -179,6 +179,44 @@ public class AdminDao {
         }
     }
 
+    public void createGameWithTiers(String gameName, int defaultMmr, List<String> tierNames, List<Integer> minMmrs) {
+        if (gameName == null || gameName.trim().length() == 0) {
+            throw new RuntimeException("Game name cannot be empty.");
+        }
+        if (defaultMmr < 0) {
+            throw new RuntimeException("Default MMR cannot be negative.");
+        }
+        if (tierNames == null || minMmrs == null || tierNames.size() == 0 || tierNames.size() != minMmrs.size()) {
+            throw new RuntimeException("Tier config is invalid.");
+        }
+
+        try (Connection conn = DBUtil.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                int gameId = insertGame(conn, gameName.trim(), defaultMmr);
+                insertRankTiers(conn, gameId, tierNames, minMmrs);
+
+                int defaultTierId = queryTierIdByMmr(conn, gameId, defaultMmr);
+                String initStatsSql = "INSERT INTO player_stats(player_id, game_id, tier_id, mmr, wins, losses) " +
+                        "SELECT player_id, ?, ?, ?, 0, 0 FROM player";
+                try (PreparedStatement ps = conn.prepareStatement(initStatsSql)) {
+                    ps.setInt(1, gameId);
+                    ps.setInt(2, defaultTierId);
+                    ps.setInt(3, defaultMmr);
+                    ps.executeUpdate();
+                }
+                conn.commit();
+            } catch (Exception e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            throw buildGameManageException("Create game failed.", e);
+        }
+    }
+
     public void addFiveVsFiveMatch(String gameName, List<String> winners, List<String> losers, int adminId) {
         if (winners.size() != 5 || losers.size() != 5) {
             throw new IllegalArgumentException("Winners and losers must each have 5 players.");
@@ -368,6 +406,48 @@ public class AdminDao {
         }
     }
 
+    private int insertGame(Connection conn, String gameName, int defaultMmr) throws Exception {
+        String sql = "INSERT INTO game(name, default_mmr) VALUES(?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, gameName);
+            ps.setInt(2, defaultMmr);
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (!rs.next()) {
+                    throw new RuntimeException("Cannot get generated game_id.");
+                }
+                return rs.getInt(1);
+            }
+        }
+    }
+
+    private void insertRankTiers(Connection conn, int gameId, List<String> tierNames, List<Integer> minMmrs) throws Exception {
+        Set<String> uniqueTierNames = new HashSet<String>();
+        String sql = "INSERT INTO rank_tier(game_id, tier_name, min_mmr) VALUES(?, ?, ?)";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (int i = 0; i < tierNames.size(); i++) {
+                String tierName = tierNames.get(i) == null ? "" : tierNames.get(i).trim();
+                int minMmr = minMmrs.get(i);
+                if (tierName.length() == 0) {
+                    throw new RuntimeException("Tier name cannot be empty.");
+                }
+                if (minMmr < 0) {
+                    throw new RuntimeException("Tier min_mmr cannot be negative.");
+                }
+                String lowerName = tierName.toLowerCase();
+                if (uniqueTierNames.contains(lowerName)) {
+                    throw new RuntimeException("Tier names must be unique.");
+                }
+                uniqueTierNames.add(lowerName);
+
+                ps.setInt(1, gameId);
+                ps.setString(2, tierName);
+                ps.setInt(3, minMmr);
+                ps.executeUpdate();
+            }
+        }
+    }
+
     private void initializePlayerStatsForAllGames(Connection conn, int playerId) throws Exception {
         String sql = "SELECT game_id, default_mmr FROM game";
         try (PreparedStatement ps = conn.prepareStatement(sql);
@@ -451,6 +531,18 @@ public class AdminDao {
         String lowerMessage = rootMessage == null ? "" : rootMessage.toLowerCase();
         if (lowerMessage.contains("duplicate") && lowerMessage.contains("username")) {
             return new RuntimeException("Username already exists.", e);
+        }
+        if (rootMessage == null || rootMessage.trim().length() == 0) {
+            return new RuntimeException(fallbackMessage, e);
+        }
+        return new RuntimeException(rootMessage, e);
+    }
+
+    private RuntimeException buildGameManageException(String fallbackMessage, Exception e) {
+        String rootMessage = extractRootMessage(e);
+        String lowerMessage = rootMessage == null ? "" : rootMessage.toLowerCase();
+        if (lowerMessage.contains("duplicate") && lowerMessage.contains("game")) {
+            return new RuntimeException("Game name already exists.", e);
         }
         if (rootMessage == null || rootMessage.trim().length() == 0) {
             return new RuntimeException(fallbackMessage, e);

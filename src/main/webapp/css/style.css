@@ -29,7 +29,7 @@ body {
     box-shadow: 0 2px 8px rgba(31, 41, 55, 0.08);
 }
 
-label, input, select, button {
+label, input, select, textarea, button {
     display: block;
     width: 100%;
     box-sizing: border-box;
@@ -40,7 +40,7 @@ label {
     margin-bottom: 4px;
 }
 
-input, select {
+input, select, textarea {
     padding: 8px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;

@@ -39,5 +39,4 @@ JOIN rank_tier rt ON rt.game_id = g.game_id
         FROM rank_tier rt2
         WHERE rt2.game_id = g.game_id
           AND rt2.min_mmr <= g.default_mmr
-    )
-WHERE p.username <> 'admin';
+    );

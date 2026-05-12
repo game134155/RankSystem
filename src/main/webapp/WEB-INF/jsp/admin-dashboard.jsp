@@ -55,6 +55,22 @@
     </div>
 
     <div class="card">
+        <h3>Add Game</h3>
+        <form method="post" action="<%=request.getContextPath()%>/admin/add-game">
+            <label>Game Name</label>
+            <input type="text" name="gameName" placeholder="new game name" required>
+
+            <label>Default MMR</label>
+            <input type="number" name="defaultMmr" min="0" value="1000" required>
+
+            <label>Tier Config (one line each: tier_name,min_mmr)</label>
+            <textarea name="tierLines" rows="6" placeholder="Bronze,0&#10;Silver,1000&#10;Gold,1200" required></textarea>
+            <p class="hint">After adding, all existing players get this game with default MMR.</p>
+            <button type="submit">Add Game and Init All Players</button>
+        </form>
+    </div>
+
+    <div class="card">
         <h3>All Players</h3>
         <table>
             <tr><th>Player ID</th><th>Username</th><th>Role</th><th>Registered</th><th>Action</th></tr>
