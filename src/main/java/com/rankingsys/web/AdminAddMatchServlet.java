@@ -28,6 +28,7 @@ public class AdminAddMatchServlet extends HttpServlet {
         }
 
         String gameName = req.getParameter("gameName");
+        String matchMode = req.getParameter("matchMode");
         List<String> winners = new ArrayList<String>();
         List<String> losers = new ArrayList<String>();
         for (int i = 1; i <= 5; i++) {
@@ -36,20 +37,21 @@ public class AdminAddMatchServlet extends HttpServlet {
         }
 
         try {
-            adminDao.addFiveVsFiveMatch(gameName, winners, losers, user.getPlayerId());
+            adminDao.addFiveVsFiveMatch(gameName, winners, losers, user.getPlayerId(), matchMode);
             req.getSession().removeAttribute("flashForm");
             resp.sendRedirect(req.getContextPath() + "/admin/dashboard?ok=1");
         } catch (Exception e) {
             HttpSession session = req.getSession();
             session.setAttribute("flashError", extractRootMessage(e));
-            session.setAttribute("flashForm", buildFlashForm(gameName, winners, losers));
+            session.setAttribute("flashForm", buildFlashForm(gameName, matchMode, winners, losers));
             resp.sendRedirect(req.getContextPath() + "/admin/dashboard");
         }
     }
 
-    private Map<String, String> buildFlashForm(String gameName, List<String> winners, List<String> losers) {
+    private Map<String, String> buildFlashForm(String gameName, String matchMode, List<String> winners, List<String> losers) {
         Map<String, String> form = new HashMap<String, String>();
         form.put("gameName", gameName == null ? "" : gameName);
+        form.put("matchMode", matchMode == null || matchMode.trim().length() == 0 ? "NORMAL" : matchMode.trim());
         for (int i = 1; i <= 5; i++) {
             form.put("winner" + i, safeValue(winners.get(i - 1)));
             form.put("loser" + i, safeValue(losers.get(i - 1)));

@@ -44,11 +44,12 @@ CREATE TABLE player_stats (
 CREATE TABLE match_history (
     match_id INT AUTO_INCREMENT PRIMARY KEY,
     game_id INT NOT NULL,
-    match_type VARCHAR(20) NOT NULL DEFAULT '5v5',
+    match_type VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
     start_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
     CONSTRAINT fk_match_history_game FOREIGN KEY (game_id) REFERENCES game(game_id),
-    CONSTRAINT fk_match_history_creator FOREIGN KEY (created_by) REFERENCES player(player_id)
+    CONSTRAINT fk_match_history_creator FOREIGN KEY (created_by) REFERENCES player(player_id),
+    CONSTRAINT chk_match_history_type CHECK (match_type IN ('CASUAL', 'NORMAL', 'PEAK'))
 );
 
 CREATE TABLE match_player_result (

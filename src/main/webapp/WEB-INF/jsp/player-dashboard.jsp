@@ -85,11 +85,17 @@
         </form>
 
         <table>
-            <tr><th>Match ID</th><th>Game</th><th>Time</th><th>Result</th><th>MMR Change</th><th>Before</th><th>After</th></tr>
+            <tr><th>Match ID</th><th>Game</th><th>Type</th><th>Time</th><th>Result</th><th>MMR Change</th><th>Before</th><th>After</th></tr>
             <% for (MatchRecordView item : matchRecords) { %>
             <tr>
                 <td><%=item.getMatchId()%></td>
                 <td><%=item.getGameName()%></td>
+                <td><%
+                    String mt = item.getMatchType();
+                    if ("CASUAL".equals(mt)) { %>Casual Custom<% }
+                    else if ("PEAK".equals(mt)) { %>Peak Match<% }
+                    else if ("NORMAL".equals(mt)) { %>Normal Match<% }
+                    else { %><%=mt != null ? mt : "-"%><% } %></td>
                 <td><%=item.getStartTime()%></td>
                 <td><%=item.getResult()%></td>
                 <td><%=item.getMmrChange()%></td>

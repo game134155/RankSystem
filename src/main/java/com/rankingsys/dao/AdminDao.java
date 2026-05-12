@@ -217,11 +217,18 @@ public class AdminDao {
         }
     }
 
-    public void addFiveVsFiveMatch(String gameName, List<String> winners, List<String> losers, int adminId) {
+    /**
+     * MMR change is base formula × multiplier; wins/losses always update.
+     * CASUAL=0×, NORMAL=1×, PEAK=3×.
+     */
+    public void addFiveVsFiveMatch(String gameName, List<String> winners, List<String> losers, int adminId,
+                                   String matchModeCode) {
         if (winners.size() != 5 || losers.size() != 5) {
             throw new IllegalArgumentException("Winners and losers must each have 5 players.");
         }
         validateTeams(winners, losers);
+        int multiplier = resolveMmrMultiplier(matchModeCode);
+        String matchType = normalizeMatchType(matchModeCode);
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
@@ -237,10 +244,12 @@ public class AdminDao {
                 int avgWin = average(mmrByPlayer, winnerIds);
                 int avgLose = average(mmrByPlayer, loserIds);
                 int delta = (avgLose - avgWin) / 10 + 10;
-                int winnerChange = Math.max(3, delta);
-                int loserChange = -Math.max(3, delta);
+                int baseWinnerChange = Math.max(3, delta);
+                int baseLoserChange = -Math.max(3, delta);
+                int winnerChange = baseWinnerChange * multiplier;
+                int loserChange = baseLoserChange * multiplier;
 
-                int matchId = insertMatch(conn, gameId, adminId);
+                int matchId = insertMatch(conn, gameId, matchType, adminId);
                 for (int playerId : winnerIds) {
                     updatePlayerAfterMatch(conn, matchId, gameId, playerId, "WIN", winnerChange, mmrByPlayer.get(playerId));
                 }
@@ -347,11 +356,37 @@ public class AdminDao {
         return total / players.size();
     }
 
-    private int insertMatch(Connection conn, int gameId, int adminId) throws Exception {
-        String sql = "INSERT INTO match_history(game_id, match_type, created_by) VALUES(?, '5v5', ?)";
+    private static int resolveMmrMultiplier(String matchModeCode) {
+        String code = matchModeCode == null ? "" : matchModeCode.trim().toUpperCase();
+        if ("CASUAL".equals(code)) {
+            return 0;
+        }
+        if ("PEAK".equals(code)) {
+            return 3;
+        }
+        if ("NORMAL".equals(code) || code.length() == 0) {
+            return 1;
+        }
+        throw new IllegalArgumentException("Invalid match mode: use CASUAL, NORMAL, or PEAK.");
+    }
+
+    private static String normalizeMatchType(String matchModeCode) {
+        String code = matchModeCode == null ? "" : matchModeCode.trim().toUpperCase();
+        if ("CASUAL".equals(code)) {
+            return "CASUAL";
+        }
+        if ("PEAK".equals(code)) {
+            return "PEAK";
+        }
+        return "NORMAL";
+    }
+
+    private int insertMatch(Connection conn, int gameId, String matchType, int adminId) throws Exception {
+        String sql = "INSERT INTO match_history(game_id, match_type, created_by) VALUES(?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, gameId);
-            ps.setInt(2, adminId);
+            ps.setString(2, matchType);
+            ps.setInt(3, adminId);
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {

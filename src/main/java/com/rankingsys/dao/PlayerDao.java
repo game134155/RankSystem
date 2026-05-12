@@ -43,7 +43,7 @@ public class PlayerDao {
 
     public List<MatchRecordView> getMatchRecords(int playerId, String gameName) {
         StringBuilder sql = new StringBuilder(
-                "SELECT mh.match_id, g.name AS game_name, mh.start_time, mpr.result, mpr.mmr_change, mpr.mmr_before, mpr.mmr_after " +
+                "SELECT mh.match_id, g.name AS game_name, mh.start_time, mh.match_type, mpr.result, mpr.mmr_change, mpr.mmr_before, mpr.mmr_after " +
                         "FROM match_player_result mpr " +
                         "JOIN match_history mh ON mh.match_id = mpr.match_id " +
                         "JOIN game g ON g.game_id = mh.game_id " +
@@ -70,6 +70,7 @@ public class PlayerDao {
                     record.setMmrChange(rs.getInt("mmr_change"));
                     record.setMmrBefore(rs.getInt("mmr_before"));
                     record.setMmrAfter(rs.getInt("mmr_after"));
+                    record.setMatchType(rs.getString("match_type"));
                     list.add(record);
                 }
             }

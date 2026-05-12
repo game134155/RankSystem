@@ -114,6 +114,17 @@
                 <% } %>
             </select>
 
+            <label>Match Type (MMR Multiplier)</label>
+            <select name="matchMode" required>
+                <%
+                    String fm = flashForm == null ? "NORMAL" : flashForm.get("matchMode");
+                    if (fm == null || fm.trim().length() == 0) fm = "NORMAL";
+                %>
+                <option value="CASUAL" <%="CASUAL".equals(fm) ? "selected" : ""%>>Casual Custom (MMR ×0, win/loss still counts)</option>
+                <option value="NORMAL" <%="NORMAL".equals(fm) ? "selected" : ""%>>Normal Match (MMR ×1)</option>
+                <option value="PEAK" <%="PEAK".equals(fm) ? "selected" : ""%>>Peak Match (MMR ×3)</option>
+            </select>
+
             <div class="grid">
                 <div>
                     <h4>Winner Team (5 usernames)</h4>

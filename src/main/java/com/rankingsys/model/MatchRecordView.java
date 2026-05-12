@@ -10,6 +10,8 @@ public class MatchRecordView {
     private int mmrChange;
     private int mmrBefore;
     private int mmrAfter;
+    /** CASUAL / NORMAL / PEAK (or legacy values from older DB). */
+    private String matchType;
 
     public int getMatchId() {
         return matchId;
@@ -65,5 +67,13 @@ public class MatchRecordView {
 
     public void setMmrAfter(int mmrAfter) {
         this.mmrAfter = mmrAfter;
+    }
+
+    public String getMatchType() {
+        return matchType;
+    }
+
+    public void setMatchType(String matchType) {
+        this.matchType = matchType;
     }
 }
