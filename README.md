@@ -51,11 +51,26 @@ Default now:
 - user: `root`
 - password: `12345678`
 
-## Tomcat Deployment
+## One-command Run (Maven)
+1. Ensure MySQL is running and initialize data:
+   ```bash
+   ./scripts/reset-db.sh
+   ```
+2. Start web app directly with Maven:
+   ```bash
+   mvn jetty:run
+   ```
+3. Open in browser:
+   - `http://localhost:8080/`
+
+## Tomcat Deployment (Optional)
 1. Create a Dynamic Web Project in Eclipse/IDEA and import this folder.
-2. Add MySQL Connector/J (`mysql-connector-j-8.x.jar`) into project `WEB-INF/lib`.
-3. Use Tomcat 9+ runtime.
-4. Run project and open:
+2. Use Tomcat 10+ runtime.
+3. Build WAR and deploy:
+   ```bash
+   mvn clean package
+   ```
+4. Open:
    - `http://localhost:8080/<your-context>/`
 
 ## Notes
