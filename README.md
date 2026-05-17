@@ -32,11 +32,30 @@ Course project implementation for a game ranking information system.
 
 ## Database Setup
 1. One-command reset (drop db + run `schema.sql` + run `seed.sql`):
+
+   **Windows (PowerShell)** — run from project root:
+   ```powershell
+   .\scripts\reset-db.ps1
+   ```
+   If execution policy blocks the script:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\scripts\reset-db.ps1
+   ```
+
+   **macOS / Linux / Git Bash**:
    ```bash
    chmod +x scripts/reset-db.sh
    ./scripts/reset-db.sh
    ```
+
 2. Optional: override connection by env vars:
+
+   PowerShell:
+   ```powershell
+   $env:DB_HOST='localhost'; $env:DB_PORT='3306'; $env:DB_USER='root'; $env:DB_PASS='12345678'; $env:DB_NAME='ranking_system'; .\scripts\reset-db.ps1
+   ```
+
+   Bash:
    ```bash
    DB_HOST=localhost DB_PORT=3306 DB_USER=root DB_PASS=12345678 DB_NAME=ranking_system ./scripts/reset-db.sh
    ```
