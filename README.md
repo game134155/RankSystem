@@ -10,6 +10,9 @@ Course project implementation for a game ranking information system.
 
 ## Main Features
 - Login with `player_id + password`
+- Announcement center:
+  - Admin can publish announcements
+  - Players and admins can view all announcements
 - Role-based access:
   - Player: view own ranking and match history
   - Admin: view all players, drill into any player page, add 5v5 match

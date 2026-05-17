@@ -11,6 +11,7 @@
 <div class="container small">
     <h1>Game Ranking System</h1>
     <p class="hint">Sign in to view rankings, match history and management features.</p>
+    <p><a href="<%=request.getContextPath()%>/announcement">View Announcements</a></p>
     <form method="post" action="<%=request.getContextPath()%>/login" class="card">
         <label>Player ID</label>
         <input type="text" name="playerId" value="<%=request.getAttribute("playerId") == null ? "" : request.getAttribute("playerId")%>" required>

@@ -64,3 +64,11 @@ CREATE TABLE match_player_result (
     CONSTRAINT fk_mpr_player FOREIGN KEY (player_id) REFERENCES player(player_id),
     CONSTRAINT chk_mpr_result CHECK (result IN ('WIN', 'LOSE'))
 );
+
+CREATE TABLE announcement (
+    announcement_id INT AUTO_INCREMENT PRIMARY KEY,
+    message TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by INT NOT NULL,
+    CONSTRAINT fk_announcement_creator FOREIGN KEY (created_by) REFERENCES player(player_id)
+);

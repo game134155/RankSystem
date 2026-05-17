@@ -40,3 +40,7 @@ JOIN rank_tier rt ON rt.game_id = g.game_id
         WHERE rt2.game_id = g.game_id
           AND rt2.min_mmr <= g.default_mmr
     );
+
+INSERT INTO announcement (message, created_by) VALUES
+('Welcome to the ranking system! Check this page for updates and maintenance notices.', 1),
+('You can now register your own account on the login page.', 1);

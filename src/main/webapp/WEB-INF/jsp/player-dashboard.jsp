@@ -27,7 +27,13 @@
 <div class="container">
     <div class="topbar">
         <h2>Welcome, <%=user.getUsername()%> (<%=user.isAdmin() ? "Admin" : "Player"%>)</h2>
-        <a href="<%=request.getContextPath()%>/logout">Logout</a>
+        <div class="topbar-links">
+            <a href="<%=request.getContextPath()%>/announcement">Announcements</a>
+            <% if (user.isAdmin()) { %>
+            <a href="<%=request.getContextPath()%>/admin/dashboard">Admin Dashboard</a>
+            <% } %>
+            <a href="<%=request.getContextPath()%>/logout">Logout</a>
+        </div>
     </div>
     <% if (flashPlayerOk != null) { %>
     <p class="ok"><%=flashPlayerOk%></p>

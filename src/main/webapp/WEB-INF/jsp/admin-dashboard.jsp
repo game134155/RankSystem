@@ -23,7 +23,11 @@
 <div class="container">
     <div class="topbar">
         <h2>Admin Dashboard</h2>
-        <a href="<%=request.getContextPath()%>/logout">Logout</a>
+        <div class="topbar-links">
+            <a href="<%=request.getContextPath()%>/player/dashboard">Player View</a>
+            <a href="<%=request.getContextPath()%>/announcement">Announcements</a>
+            <a href="<%=request.getContextPath()%>/logout">Logout</a>
+        </div>
     </div>
 
     <% if ("1".equals(request.getParameter("ok"))) { %>
