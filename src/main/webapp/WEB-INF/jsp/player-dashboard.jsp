@@ -97,12 +97,7 @@
             <tr>
                 <td><%=item.getMatchId()%></td>
                 <td><%=item.getGameName()%></td>
-                <td><%
-                    String mt = item.getMatchType();
-                    if ("CASUAL".equals(mt)) { %>Casual Custom<% }
-                    else if ("PEAK".equals(mt)) { %>Peak Match<% }
-                    else if ("NORMAL".equals(mt)) { %>Normal Match<% }
-                    else { %><%=mt != null ? mt : "-"%><% } %></td>
+                <td><%=item.getMatchType() != null ? item.getMatchType() : "-"%></td>
                 <td><%=item.getStartTime()%></td>
                 <td><%=item.getResult()%></td>
                 <td><%=item.getMmrChange()%></td>

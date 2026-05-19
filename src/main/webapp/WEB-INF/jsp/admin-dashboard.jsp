@@ -146,6 +146,9 @@
             </div>
             <button type="submit">Create Match and Update MMR</button>
         </form>
+        <form method="post" action="<%=request.getContextPath()%>/admin/add-random-matches" onsubmit="return confirm('Generate 10 random 5v5 matches now?');" style="margin-top: 10px;">
+            <button type="submit">Add 10 Random 5v5 Matches</button>
+        </form>
     </div>
 </div>
 </body>

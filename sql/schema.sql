@@ -41,15 +41,45 @@ CREATE TABLE player_stats (
     CONSTRAINT fk_player_stats_tier FOREIGN KEY (tier_id) REFERENCES rank_tier(tier_id)
 );
 
+-- ============================================================
+-- Subtype pattern: match_type dictionary table
+-- Replaces hardcoded CHECK constraint with a lookup table,
+-- storing multiplier in DB instead of Java code.
+-- ============================================================
+CREATE TABLE match_type (
+    type_code VARCHAR(20) PRIMARY KEY,
+    display_name VARCHAR(50) NOT NULL,
+    mmr_multiplier INT NOT NULL DEFAULT 1,
+    description VARCHAR(200)
+);
+
 CREATE TABLE match_history (
     match_id INT AUTO_INCREMENT PRIMARY KEY,
     game_id INT NOT NULL,
-    match_type VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
+    type_code VARCHAR(20) NOT NULL DEFAULT 'NORMAL',
     start_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by INT NOT NULL,
     CONSTRAINT fk_match_history_game FOREIGN KEY (game_id) REFERENCES game(game_id),
     CONSTRAINT fk_match_history_creator FOREIGN KEY (created_by) REFERENCES player(player_id),
-    CONSTRAINT chk_match_history_type CHECK (match_type IN ('CASUAL', 'NORMAL', 'PEAK'))
+    CONSTRAINT fk_match_history_type FOREIGN KEY (type_code) REFERENCES match_type(type_code)
+);
+
+-- ============================================================
+-- Subtype pattern: Shared Primary Key (Class Table Inheritance)
+-- Each match type can have its own extension table with
+-- type-specific attributes, linked by match_id FK+PK.
+-- ============================================================
+CREATE TABLE match_peak_detail (
+    match_id INT PRIMARY KEY,
+    bonus_multiplier INT NOT NULL DEFAULT 3,
+    season_points INT NOT NULL DEFAULT 0,
+    CONSTRAINT fk_peak_detail_match FOREIGN KEY (match_id) REFERENCES match_history(match_id)
+);
+
+CREATE TABLE match_casual_detail (
+    match_id INT PRIMARY KEY,
+    custom_reason VARCHAR(200),
+    CONSTRAINT fk_casual_detail_match FOREIGN KEY (match_id) REFERENCES match_history(match_id)
 );
 
 CREATE TABLE match_player_result (

@@ -10,7 +10,7 @@ public final class DBUtil {
             //here is the private key for you to connect the database
     private static final String JDBC_USER = "root";
 
-    private static final String JDBC_PASSWORD = "114514";
+    private static final String JDBC_PASSWORD = "12345678";
 
 
 

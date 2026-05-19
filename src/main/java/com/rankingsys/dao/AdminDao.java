@@ -219,7 +219,7 @@ public class AdminDao {
 
     /**
      * MMR change is base formula × multiplier; wins/losses always update.
-     * CASUAL=0×, NORMAL=1×, PEAK=3×.
+     * Multiplier is read from the match_type subtype table instead of hardcoded.
      */
     public void addFiveVsFiveMatch(String gameName, List<String> winners, List<String> losers, int adminId,
                                    String matchModeCode) {
@@ -227,12 +227,12 @@ public class AdminDao {
             throw new IllegalArgumentException("Winners and losers must each have 5 players.");
         }
         validateTeams(winners, losers);
-        int multiplier = resolveMmrMultiplier(matchModeCode);
-        String matchType = normalizeMatchType(matchModeCode);
+        String typeCode = normalizeMatchType(matchModeCode);
         try (Connection conn = DBUtil.getConnection()) {
             conn.setAutoCommit(false);
             try {
                 int gameId = queryGameId(conn, gameName);
+                int multiplier = queryMmrMultiplier(conn, typeCode);
 
                 List<Integer> winnerIds = queryPlayerIds(conn, winners);
                 List<Integer> loserIds = queryPlayerIds(conn, losers);
@@ -249,7 +249,7 @@ public class AdminDao {
                 int winnerChange = baseWinnerChange * multiplier;
                 int loserChange = baseLoserChange * multiplier;
 
-                int matchId = insertMatch(conn, gameId, matchType, adminId);
+                int matchId = insertMatch(conn, gameId, typeCode, adminId);
                 for (int playerId : winnerIds) {
                     updatePlayerAfterMatch(conn, matchId, gameId, playerId, "WIN", winnerChange, mmrByPlayer.get(playerId));
                 }
@@ -356,18 +356,17 @@ public class AdminDao {
         return total / players.size();
     }
 
-    private static int resolveMmrMultiplier(String matchModeCode) {
-        String code = matchModeCode == null ? "" : matchModeCode.trim().toUpperCase();
-        if ("CASUAL".equals(code)) {
-            return 0;
+    private int queryMmrMultiplier(Connection conn, String typeCode) throws Exception {
+        String sql = "SELECT mmr_multiplier FROM match_type WHERE type_code = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, typeCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new IllegalArgumentException("Invalid match type: " + typeCode);
+                }
+                return rs.getInt("mmr_multiplier");
+            }
         }
-        if ("PEAK".equals(code)) {
-            return 3;
-        }
-        if ("NORMAL".equals(code) || code.length() == 0) {
-            return 1;
-        }
-        throw new IllegalArgumentException("Invalid match mode: use CASUAL, NORMAL, or PEAK.");
     }
 
     private static String normalizeMatchType(String matchModeCode) {
@@ -381,11 +380,11 @@ public class AdminDao {
         return "NORMAL";
     }
 
-    private int insertMatch(Connection conn, int gameId, String matchType, int adminId) throws Exception {
-        String sql = "INSERT INTO match_history(game_id, match_type, created_by) VALUES(?, ?, ?)";
+    private int insertMatch(Connection conn, int gameId, String typeCode, int adminId) throws Exception {
+        String sql = "INSERT INTO match_history(game_id, type_code, created_by) VALUES(?, ?, ?)";
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setInt(1, gameId);
-            ps.setString(2, matchType);
+            ps.setString(2, typeCode);
             ps.setInt(3, adminId);
             ps.executeUpdate();
             try (ResultSet rs = ps.getGeneratedKeys()) {
